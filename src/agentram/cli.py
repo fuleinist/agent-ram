@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 from pathlib import Path
 
@@ -93,6 +94,7 @@ def list_memories(
     workspace: str | None = typer.Option(None, "--workspace", "-w", help="Workspace path"),
     memory_type: str | None = typer.Option(None, "--type", "-t", help="Filter by type"),
     limit: int = typer.Option(50, "--limit", "-l", help="Max results"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """List all memories."""
     workspace = workspace or get_workspace()
@@ -108,21 +110,38 @@ def list_memories(
         )
 
         if not memories:
-            console.print("[yellow]No memories[/yellow]")
+            if json_output:
+                console.print("[]")
+            else:
+                console.print("[yellow]No memories[/yellow]")
             await db.close()
             return
 
-        table = Table(title="AgentRAM Memories")
-        table.add_column("ID", style="cyan")
-        table.add_column("Type", style="magenta")
-        table.add_column("Content", style="white")
-        table.add_column("Created")
+        if json_output:
+            output = [
+                {
+                    "id": m.id,
+                    "type": m.memory_type,
+                    "content": m.content,
+                    "created": m.created_at.isoformat(),
+                    "commit": m.commit_sha,
+                    "tags": m.tags,
+                }
+                for m in memories
+            ]
+            console.print(json.dumps(output, ensure_ascii=False))
+        else:
+            table = Table(title="AgentRAM Memories")
+            table.add_column("ID", style="cyan")
+            table.add_column("Type", style="magenta")
+            table.add_column("Content", style="white")
+            table.add_column("Created")
 
-        for m in memories:
-            content = m.content[:50] + "..." if len(m.content) > 50 else m.content
-            table.add_row(m.id[:8], m.memory_type, content, m.created_at.strftime("%Y-%m-%d %H:%M"))
+            for m in memories:
+                content = m.content[:50] + "..." if len(m.content) > 50 else m.content
+                table.add_row(m.id[:8], m.memory_type, content, m.created_at.strftime("%Y-%m-%d %H:%M"))
 
-        console.print(table)
+            console.print(table)
         await db.close()
 
     asyncio.run(_list())
