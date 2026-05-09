@@ -16,16 +16,13 @@ except ImportError:
     SEMANTIC_AVAILABLE = False
 
 
-_FAILED = False
-
-
 class MemorySearch:
     """Memory retrieval with semantic search support."""
 
     def __init__(self, db: MemoryDB, model_name: str = "all-MiniLM-L6-v2"):
         self.db = db
         self.model_name = model_name
-        self._model = None
+        self._model: "SentenceTransformer | None" = None
 
     async def search(
         self,
@@ -34,10 +31,10 @@ class MemorySearch:
         limit: int = 5,
     ) -> list[MemoryEntry]:
         """Search memories by query."""
-        if SEMANTIC_AVAILABLE and not _FAILED and self._model is None:
+        if SEMANTIC_AVAILABLE and self._model is None:
             self._load_model()
 
-        if SEMANTIC_AVAILABLE and not _FAILED and self._model is not None:
+        if SEMANTIC_AVAILABLE and self._model is not None:
             return await self._semantic_search(query, workspace, limit)
         else:
             return await self.db.recall(query, workspace, limit)
@@ -54,7 +51,6 @@ class MemorySearch:
         if not memories:
             return []
 
-        contents = [m.content for m in memories]
         query_vec = self._model.encode([query], convert_to_numpy=True)[0]
 
         scores: list[tuple[float, MemoryEntry]] = []
@@ -68,9 +64,8 @@ class MemorySearch:
 
     def _load_model(self) -> None:
         """Load sentence transformer model."""
-        global _FAILED
         if SEMANTIC_AVAILABLE:
             try:
                 self._model = SentenceTransformer(self.model_name)
             except Exception:
-                _FAILED = True
+                pass  # SEMANTIC_AVAILABLE stays True; retry on next search call
