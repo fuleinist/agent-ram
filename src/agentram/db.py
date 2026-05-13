@@ -33,8 +33,10 @@ class MemoryDB:
 
     async def connect(self) -> None:
         """Initialize database connection and create tables."""
-        self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = await aiosqlite.connect(str(self._db_path))
+        db_path = Path(self._db_path) if not isinstance(self._db_path, Path) else self._db_path
+        if str(db_path) != ":memory:":
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._conn = await aiosqlite.connect(str(db_path))
         self._conn.row_factory = aiosqlite.Row
         await self._create_tables()
 
