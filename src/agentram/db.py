@@ -139,6 +139,7 @@ class MemoryDB:
         workspace: Optional[str] = None,
         memory_type: Optional[str] = None,
         limit: int = 50,
+        since: Optional[datetime] = None,
     ) -> list[MemoryEntry]:
         """List all memories, optionally filtered."""
         conditions = []
@@ -150,6 +151,9 @@ class MemoryDB:
         if memory_type:
             conditions.append("memory_type = ?")
             params.append(memory_type)
+        if since:
+            conditions.append("created_at >= ?")
+            params.append(since.isoformat())
 
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         sql = f"SELECT * FROM memories {where} ORDER BY created_at DESC LIMIT ?"

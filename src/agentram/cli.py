@@ -95,8 +95,18 @@ def list_memories(
     memory_type: str | None = typer.Option(None, "--type", "-t", help="Filter by type"),
     limit: int = typer.Option(50, "--limit", "-l", help="Max results"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    since: str | None = typer.Option(None, "--since", help="Show memories created on or after YYYY-MM-DD"),
 ) -> None:
     """List all memories."""
+    import datetime
+    since_dt = None
+    if since:
+        try:
+            since_dt = datetime.datetime.fromisoformat(since).replace(tzinfo=datetime.timezone.utc)
+        except ValueError:
+            console.print(f"[red]Invalid date format:[/red] {since} (use YYYY-MM-DD)")
+            raise typer.Exit(1)
+
     workspace = workspace or get_workspace()
 
     async def _list() -> None:
@@ -107,6 +117,7 @@ def list_memories(
             workspace=workspace,
             memory_type=memory_type,
             limit=limit,
+            since=since_dt,
         )
 
         if not memories:
